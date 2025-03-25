@@ -1,3 +1,5 @@
-resource "scaffolding_example" "example" {
-  configurable_attribute = "some-value"
+# Copyright (c) HashiCorp, Inc.
+
+resource "certificate" "my_cert" {
+  hostname = "myhostname.cern.ch"
 }
