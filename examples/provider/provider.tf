@@ -1,3 +1,5 @@
+# Copyright (c) HashiCorp, Inc.
+
 terraform {
   required_providers {
     certmgr = {
@@ -8,6 +10,6 @@ terraform {
 }
 
 provider "certmgr" {
-  hostname = "hector.cern.ch"
+  host = "hector.cern.ch"
   port     = 8008
 }
