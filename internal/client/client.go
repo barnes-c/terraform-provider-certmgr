@@ -26,12 +26,11 @@ type Certificate struct {
 	End       string `json:"end"`
 }
 
-
 func NewClient(host, port *string) (*Client, error) {
 	c := &Client{
 		HTTPClient: &http.Client{Timeout: 10 * time.Second},
 		Host:       "hector.cern.ch", // default
-		Port:       8008,        // default
+		Port:       8008,             // default
 	}
 
 	if host != nil && *host != "" {
@@ -114,7 +113,7 @@ func (c *Client) GetCertificate(hostname string) (*Certificate, error) {
 func (c *Client) DeleteCertificate(id int) error {
 	fqdn, err := c.resolveFQDN()
 	if err != nil {
-		return  fmt.Errorf("failed to resolve FQDN: %w", err)
+		return fmt.Errorf("failed to resolve FQDN: %w", err)
 	}
 
 	url := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/%d", fqdn, c.Port, id)
@@ -126,7 +125,6 @@ func (c *Client) DeleteCertificate(id int) error {
 	}
 	return err
 }
-
 
 func (c *Client) UpdateCertificate(hostname string, cert Certificate) (*Certificate, error) {
 	certPtr, err := c.GetCertificate(hostname)

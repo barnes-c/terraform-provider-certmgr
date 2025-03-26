@@ -29,9 +29,9 @@ func NewCertificateResource() resource.Resource {
 }
 
 type certificateResourceModel struct {
-	ID          types.String     `tfsdk:"id"`
-	hostname       types.String  `tfsdk:"hostname"`
-	LastUpdated types.String     `tfsdk:"last_updated"`
+	ID          types.String `tfsdk:"id"`
+	Hostname    types.String `tfsdk:"hostname"`
+	LastUpdated types.String `tfsdk:"last_updated"`
 }
 
 type certificateResource struct {
@@ -73,7 +73,7 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	certificate, err := r.client.CreateCertificate(plan.hostname.String())
+	certificate, err := r.client.CreateCertificate(plan.Hostname.String())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating certificate",
@@ -83,7 +83,7 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	plan.ID = types.StringValue(strconv.Itoa(certificate.ID))
-	plan.hostname = types.StringValue(certificate.Hostname)
+	plan.Hostname = types.StringValue(certificate.Hostname)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -110,7 +110,7 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	state.hostname = types.StringValue(certificate.Hostname)
+	state.Hostname = types.StringValue(certificate.Hostname)
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -128,7 +128,7 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	var cert certMgr.Certificate
-	cert.Hostname = plan.hostname.String()
+	cert.Hostname = plan.Hostname.String()
 
 	_, err := r.client.UpdateCertificate(plan.ID.ValueString(), cert)
 	if err != nil {
@@ -148,7 +148,7 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	plan.hostname = types.StringValue(certificate.Hostname)
+	plan.Hostname = types.StringValue(certificate.Hostname)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -186,7 +186,6 @@ func (r *certificateResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 }
 
-
 func (r *certificateResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -205,7 +204,6 @@ func (r *certificateResource) Configure(_ context.Context, req resource.Configur
 
 	r.client = client
 }
-
 
 func (r *certificateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)

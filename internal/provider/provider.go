@@ -17,8 +17,7 @@ import (
 )
 
 var (
-	_ provider.Provider              = &certMgrProvider{}
-
+	_ provider.Provider = &certMgrProvider{}
 )
 
 func New(version string) func() provider.Provider {
@@ -30,8 +29,8 @@ func New(version string) func() provider.Provider {
 }
 
 type certMgrProviderModel struct {
-	Host     types.String `tfsdk:"host"`
-	Port types.String `tfsdk:"Port"`
+	Host types.String `tfsdk:"host"`
+	Port types.String `tfsdk:"port"`
 }
 
 type certMgrProvider struct {
@@ -39,7 +38,7 @@ type certMgrProvider struct {
 }
 
 func (p *certMgrProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "certMgr"
+	resp.TypeName = "certmgr"
 	resp.Version = p.version
 }
 
@@ -123,7 +122,7 @@ func (p *certMgrProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	if resp.Diagnostics.HasError() {
-		return 
+		return
 	}
 
 	ctx = tflog.SetField(ctx, "certMgr_host", host)
@@ -155,6 +154,5 @@ func (p *certMgrProvider) Resources(_ context.Context) []func() resource.Resourc
 }
 
 func (p *certMgrProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-	}
+	return []func() datasource.DataSource{}
 }

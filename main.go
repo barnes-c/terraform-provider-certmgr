@@ -28,8 +28,7 @@ func main() {
 	opts := providerserver.ServeOpts{
 		Address: "gitlab.cern.ch/ai-config-team/certmgr",
 		Debug:   debug,
-	  }
-	  
+	}
 
 	err := providerserver.Serve(context.Background(), provider.New(version), opts)
 
