@@ -11,7 +11,3 @@ provider "certmgr" {
   host = "<YOUR-CERTMGR-SERVER>"
   port = 8008
 }
-
-resource "certmgr_certificate" "my_cert" {
-  hostname = "myhostname.cern.ch"
-}
