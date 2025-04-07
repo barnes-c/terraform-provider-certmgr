@@ -1,4 +1,5 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright (c) Christopher Barnes <christopher@barnes.biz>
+// SPDX-License-Identifier: MPL-2.0
 
 package certMgr
 
@@ -98,9 +99,6 @@ func (c *Client) GetCertificate(hostname string) (*Certificate, error) {
 		}
 		return nil, fmt.Errorf("failed to execute curl: %w", err)
 	}
-
-	// TODO Remove in final version
-	fmt.Printf("curl output: %s\n", output)
 
 	var cert Certificate
 	if err := json.Unmarshal(output, &cert); err != nil {
