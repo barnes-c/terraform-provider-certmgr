@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -30,8 +31,8 @@ type Certificate struct {
 func NewClient(host, port *string) (*Client, error) {
 	c := &Client{
 		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-		Host:       "", // default
-		Port:       8008,             // default
+		Host:       "",   // default
+		Port:       8008, // default
 	}
 
 	if host != nil && *host != "" {
@@ -50,11 +51,25 @@ func NewClient(host, port *string) (*Client, error) {
 }
 
 func (c *Client) resolveFQDN() (string, error) {
-	fqdn, err := net.LookupCNAME(c.Host)
+	ips, err := net.LookupIP(c.Host)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve FQDN for host %s: %w", c.Host, err)
+		return "", fmt.Errorf("failed to resolve IP for hostname %s: %w", c.Host, err)
 	}
-	return fqdn, nil
+
+	for _, ip := range ips {
+		ptrs, err := net.LookupAddr(ip.String())
+		if err != nil {
+			continue
+		}
+
+		for _, ptr := range ptrs {
+			cleanPtr := strings.TrimSuffix(ptr, ".")
+			if strings.HasPrefix(cleanPtr, "baby") {
+				return cleanPtr, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("no PTR record starting with 'baby' found for host %s", c.Host)
 }
 
 func (c *Client) CreateCertificate(hostname string) (*Certificate, error) {
