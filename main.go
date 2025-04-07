@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package main
 
 import (
@@ -26,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "gitlab.cern.ch/ai-config-team/certmgr",
+		Address: "github.com/barnes-c/terraform-provider-certmgr",
 		Debug:   debug,
 	}
 
