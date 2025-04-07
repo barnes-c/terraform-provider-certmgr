@@ -57,19 +57,27 @@ func (c *Client) resolveFQDN() (string, error) {
 	}
 
 	for _, ip := range ips {
-		ptrs, err := net.LookupAddr(ip.String())
-		if err != nil {
+		if ip.To4() == nil {
 			continue
 		}
 
-		for _, ptr := range ptrs {
-			cleanPtr := strings.TrimSuffix(ptr, ".")
-			if strings.HasPrefix(cleanPtr, "baby") {
-				return cleanPtr, nil
-			}
+		ptrs, err := net.LookupAddr(ip.String())
+		if err != nil {
+			return "", fmt.Errorf("reverse lookup failed for IP %s: %w", ip.String(), err)
 		}
+
+		if len(ptrs) == 0 {
+			return "", fmt.Errorf("no PTR record found for IP %s", ip.String())
+		}
+
+		ptr := strings.TrimSuffix(ptrs[0], ".")
+		if strings.HasPrefix(ptr, "baby") {
+			return ptr, nil
+		}
+		return "", fmt.Errorf("PTR record %q does not start with 'baby'", ptr)
 	}
-	return "", fmt.Errorf("no PTR record starting with 'baby' found for host %s", c.Host)
+
+	return "", fmt.Errorf("no IPv4 address found for host %s", c.Host)
 }
 
 func (c *Client) CreateCertificate(hostname string) (*Certificate, error) {
