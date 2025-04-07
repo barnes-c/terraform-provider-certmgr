@@ -30,7 +30,7 @@ type Certificate struct {
 func NewClient(host, port *string) (*Client, error) {
 	c := &Client{
 		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-		Host:       "hector.cern.ch", // default
+		Host:       "", // default
 		Port:       8008,             // default
 	}
 

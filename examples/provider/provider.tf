@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "certmgr" {
-  host = "hector.cern.ch"
+  host = "<YOUR-CERTMGR-SERVER>"
   port = 8008
 }
 
