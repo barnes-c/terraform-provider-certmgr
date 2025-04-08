@@ -21,5 +21,5 @@ Manages an certificate.
 
 ### Read-Only
 
-- `id` (String) Numeric identifier of the certificate.
+- `id` (Number) Numeric identifier of the certificate.
 - `last_updated` (String) Timestamp of the last Terraform update of the certificate.
