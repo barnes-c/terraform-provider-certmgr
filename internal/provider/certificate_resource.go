@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -104,13 +105,18 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 	hostname := state.Hostname.ValueString()
 	certificate, err := r.client.GetCertificate(hostname)
 	if err != nil {
+		if strings.Contains(err.Error(), "no certificates found") {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+	
 		resp.Diagnostics.AddError(
 			"Error Reading certMgr certificate",
 			"Could not read certMgr certificate for hostname "+hostname+": "+err.Error(),
 		)
 		return
 	}
-
+	
 	state.ID = types.StringValue(strconv.Itoa(certificate.ID))
 	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
