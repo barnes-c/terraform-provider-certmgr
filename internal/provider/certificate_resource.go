@@ -102,22 +102,21 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	certificate, err := r.client.GetCertificate(state.ID.ValueString())
+	hostname := state.Hostname.ValueString()
+	certificate, err := r.client.GetCertificate(hostname)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading certMgr certificate",
-			"Could not read certMgr certificate ID "+state.ID.ValueString()+": "+err.Error(),
+			"Could not read certMgr certificate for hostname "+hostname+": "+err.Error(),
 		)
 		return
 	}
 
-	state.Hostname = types.StringValue(certificate.Hostname)
+	state.ID = types.StringValue(strconv.Itoa(certificate.ID))
+	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (r *certificateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
