@@ -6,15 +6,14 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	certMgr "certMgr/internal/client"
@@ -31,7 +30,7 @@ func NewCertificateResource() resource.Resource {
 }
 
 type certificateResourceModel struct {
-	ID          types.String `tfsdk:"id"`
+	ID          types.Int64 `tfsdk:"id"`
 	Hostname    types.String `tfsdk:"hostname"`
 	LastUpdated types.String `tfsdk:"last_updated"`
 }
@@ -48,11 +47,11 @@ func (r *certificateResource) Schema(_ context.Context, _ resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		Description: "Manages an certificate.",
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
+			"id": schema.Int64Attribute{
 				Description: "Numeric identifier of the certificate.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"last_updated": schema.StringAttribute{
@@ -84,7 +83,7 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	plan.ID = types.StringValue(strconv.Itoa(certificate.ID))
+	plan.ID = types.Int64Value(int64(certificate.ID))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -117,11 +116,7 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 	
-	state.ID = types.StringValue(strconv.Itoa(certificate.ID))
-	resp.Diagnostics.AddError(
-		"this is the state id Reading certMgr certificate "+state.ID.ValueString(),
-		"testing the id "+state.ID.ValueString(),
-	)
+	state.ID = types.Int64Value(int64(certificate.ID))
 	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, &state)
@@ -139,7 +134,7 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 	var cert certMgr.Certificate
 	cert.Hostname = plan.Hostname.String()
 
-	_, err := r.client.UpdateCertificate(plan.ID.ValueString(), cert)
+	_, err := r.client.UpdateCertificate(plan.Hostname.String(), cert)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating certMgr certificate",
@@ -148,11 +143,11 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	certificate, err := r.client.GetCertificate(plan.ID.ValueString())
+	certificate, err := r.client.GetCertificate(plan.Hostname.String())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading certMgr certificate",
-			"Could not read certMgr certificate ID "+plan.ID.ValueString()+": "+err.Error(),
+			"Could not read certMgr certificate ID "+plan.Hostname.String()+": "+err.Error(),
 		)
 		return
 	}
@@ -175,22 +170,19 @@ func (r *certificateResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	idStr := state.ID.ValueString()
-	idInt, err := strconv.Atoi(idStr)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid ID Format",
-			"Expected integer value for ID but got: "+idStr,
-		)
-		return
-	}
+	id := state.ID.ValueInt64()
 
-	err = r.client.DeleteCertificate(idInt)
+	success, err := r.client.DeleteCertificate(id)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting certMgr certificate",
 			"Could not delete certificate, unexpected error: "+err.Error(),
 		)
+		return
+	}
+
+	if success {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 }
