@@ -118,6 +118,10 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 	
 	state.ID = types.StringValue(strconv.Itoa(certificate.ID))
+	resp.Diagnostics.AddError(
+		"this is the state id Reading certMgr certificate "+state.ID.ValueString(),
+		"testing the id "+state.ID.ValueString(),
+	)
 	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, &state)
