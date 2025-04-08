@@ -112,7 +112,7 @@ func (c *Client) GetCertificate(hostname string) (*Certificate, error) {
 		return nil, fmt.Errorf("failed to resolve FQDN: %w", err)
 	}
 
-	url := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/%s", fqdn, c.Port, hostname)
+	url := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/?hostname=%s", fqdn, c.Port, hostname)
 	cmd := exec.Command("curl", "-s", "--negotiate", "-u", ":", "-X", "GET", url)
 
 	output, err := cmd.Output()
@@ -123,13 +123,26 @@ func (c *Client) GetCertificate(hostname string) (*Certificate, error) {
 		return nil, fmt.Errorf("failed to execute curl: %w", err)
 	}
 
-	var cert Certificate
-	if err := json.Unmarshal(output, &cert); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
+	if len(output) == 0 {
+		return nil, fmt.Errorf("empty response body from API")
 	}
 
-	return &cert, nil
+	type certificateListResponse struct {
+		Objects []Certificate `json:"objects"`
+	}
+
+	var list certificateListResponse
+	if err := json.Unmarshal(output, &list); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON list: %w\nRaw: %s", err, output)
+	}
+
+	if len(list.Objects) == 0 {
+		return nil, fmt.Errorf("no certificates found for hostname %s", hostname)
+	}
+
+	return &list.Objects[len(list.Objects)-1], nil
 }
+
 
 func (c *Client) DeleteCertificate(id int) error {
 	fqdn, err := c.resolveFQDN()
