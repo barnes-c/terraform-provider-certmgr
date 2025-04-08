@@ -144,10 +144,10 @@ func (c *Client) GetCertificate(hostname string) (*Certificate, error) {
 }
 
 
-func (c *Client) DeleteCertificate(id int64) (bool, error) {
+func (c *Client) DeleteCertificate(id int64)  error {
 	fqdn, err := c.resolveFQDN()
 	if err != nil {
-		return false, fmt.Errorf("failed to resolve FQDN: %w", err)
+		return  fmt.Errorf("failed to resolve FQDN: %w", err)
 	}
 
 	url := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/%d", fqdn, c.Port, id)
@@ -155,9 +155,9 @@ func (c *Client) DeleteCertificate(id int64) (bool, error) {
 		"-w", "%{http_code}", "-o", "/dev/stdout", url)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return false, fmt.Errorf("curl failed: %w; output: %s", err, output)
+		return  fmt.Errorf("curl failed: %w; output: %s", err, output)
 	}
-	return true, err
+	return  err
 }
 
 func (c *Client) UpdateCertificate(hostname string, cert Certificate) (*Certificate, error) {

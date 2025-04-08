@@ -6,7 +6,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -104,11 +103,6 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 	hostname := state.Hostname.ValueString()
 	certificate, err := r.client.GetCertificate(hostname)
 	if err != nil {
-		if strings.Contains(err.Error(), "no certificates found") {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-	
 		resp.Diagnostics.AddError(
 			"Error Reading certMgr certificate",
 			"Could not read certMgr certificate for hostname "+hostname+": "+err.Error(),
@@ -171,20 +165,14 @@ func (r *certificateResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	id := state.ID.ValueInt64()
-
-	success, err := r.client.DeleteCertificate(id)
-	if err != nil {
+	if err := r.client.DeleteCertificate(id); err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting certMgr certificate",
-			"Could not delete certificate, unexpected error: "+err.Error(),
+			fmt.Sprintf("Could not delete certificate with ID %d: %s", id, err.Error()),
 		)
 		return
 	}
-
-	if success {
-		resp.State.RemoveResource(ctx)
-		return
-	}
+	resp.State.RemoveResource(ctx)
 }
 
 func (r *certificateResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
