@@ -84,7 +84,6 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	plan.ID = types.StringValue(strconv.Itoa(certificate.ID))
-	plan.Hostname = types.StringValue(certificate.Hostname)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
