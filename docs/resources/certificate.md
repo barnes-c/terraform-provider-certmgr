@@ -3,12 +3,12 @@
 page_title: "certmgr_certificate Resource - certmgr"
 subcategory: ""
 description: |-
-  Manages an certificate.
+  Manages a certificate.
 ---
 
 # certmgr_certificate (Resource)
 
-Manages an certificate.
+Manages a certificate.
 
 
 
@@ -17,7 +17,7 @@ Manages an certificate.
 
 ### Required
 
-- `hostname` (String) Name of the hostname that belongs to the certificate.
+- `hostname` (String) Hostname that the certificate belongs to.
 
 ### Read-Only
 
