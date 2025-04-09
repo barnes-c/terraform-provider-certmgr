@@ -86,18 +86,30 @@ func (c *Client) GetCertificate(hostname string) (*Certificate, error) {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("https://%s:%d/krb/certmgr/certificate/%s/", fqdn, c.Port, hostname)
+	url := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/?hostname=%s", fqdn, c.Port, hostname)
 	cmd := exec.Command("curl", "-s", "--negotiate", "-u", ":", "-X", "GET", url)
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("curl failed: %w", err)
 	}
 
-	var cert Certificate
-	if err := json.Unmarshal(output, &cert); err != nil {
-		return nil, fmt.Errorf("unmarshal failed: %w", err)
+	type stagedResponse struct {
+		Meta    map[string]interface{} `json:"meta"`
+		Objects []Certificate          `json:"objects"`
 	}
-	return &cert, nil
+
+	var staged stagedResponse
+	if err := json.Unmarshal(output, &staged); err != nil {
+		return nil, fmt.Errorf("failed unmarshaling staged certs: %w", err)
+	}
+
+	if len(staged.Objects) == 0 {
+		return nil, fmt.Errorf("no certificates found for hostname %s", hostname)
+	}
+
+	latestCert := staged.Objects[len(staged.Objects)-1]
+
+	return &latestCert, nil
 }
 
 func (c *Client) DeleteCertificate(hostname string) error {
