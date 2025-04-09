@@ -29,7 +29,7 @@ func NewCertificateResource() resource.Resource {
 }
 
 type certificateResourceModel struct {
-	ID          types.Int64 `tfsdk:"id"`
+	ID          types.Int64  `tfsdk:"id"`
 	Hostname    types.String `tfsdk:"hostname"`
 	LastUpdated types.String `tfsdk:"last_updated"`
 }
@@ -44,7 +44,7 @@ func (r *certificateResource) Metadata(_ context.Context, req resource.MetadataR
 
 func (r *certificateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages an certificate.",
+		Description: "Manages a certificate.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int64Attribute{
 				Description: "Numeric identifier of the certificate.",
@@ -58,7 +58,7 @@ func (r *certificateResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:    true,
 			},
 			"hostname": schema.StringAttribute{
-				Description: "Name of the hostname that belongs to the certificate.",
+				Description: "Hostname that the certificate belongs to.",
 				Required:    true,
 			},
 		},
@@ -73,11 +73,11 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	certificate, err := r.client.CreateCertificate(plan.Hostname.String())
+	certificate, err := r.client.CreateCertificate(plan.Hostname.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating certificate",
-			"Could not create certificate, unexpected error: "+err.Error(),
+			"Could not create certificate: "+err.Error(),
 		)
 		return
 	}
@@ -87,9 +87,6 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -104,12 +101,12 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 	certificate, err := r.client.GetCertificate(hostname)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Reading certMgr certificate",
-			"Could not read certMgr certificate for hostname "+hostname+": "+err.Error(),
+			"Error Reading certificate",
+			fmt.Sprintf("Could not read certificate for hostname %s: %s", hostname, err),
 		)
 		return
 	}
-	
+
 	state.ID = types.Int64Value(int64(certificate.ID))
 	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -125,35 +122,27 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	var cert certMgr.Certificate
-	cert.Hostname = plan.Hostname.String()
-
-	_, err := r.client.UpdateCertificate(plan.Hostname.String(), cert)
+	certificate, err := r.client.GetCertificate(plan.Hostname.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Updating certMgr certificate",
-			"Could not update certificate, unexpected error: "+err.Error(),
+			"Error fetching certificate",
+			"Could not fetch certificate for update: "+err.Error(),
 		)
 		return
 	}
 
-	certificate, err := r.client.GetCertificate(plan.Hostname.String())
+	err = r.client.UpdateCertificate(*certificate)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Reading certMgr certificate",
-			"Could not read certMgr certificate ID "+plan.Hostname.String()+": "+err.Error(),
+			"Error updating certificate",
+			"Could not update certificate: "+err.Error(),
 		)
 		return
 	}
 
-	plan.Hostname = types.StringValue(certificate.Hostname)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
-
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (r *certificateResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -164,14 +153,15 @@ func (r *certificateResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	id := state.ID.ValueInt64()
-	if err := r.client.DeleteCertificate(id); err != nil {
+	hostname := state.Hostname.ValueString()
+	if err := r.client.DeleteCertificate(hostname); err != nil {
 		resp.Diagnostics.AddError(
-			"Error Deleting certMgr certificate",
-			fmt.Sprintf("Could not delete certificate with ID %d: %s", id, err.Error()),
+			"Error deleting certificate",
+			fmt.Sprintf("Could not delete certificate for hostname %s: %s", hostname, err),
 		)
 		return
 	}
+
 	resp.State.RemoveResource(ctx)
 }
 
@@ -181,13 +171,11 @@ func (r *certificateResource) Configure(_ context.Context, req resource.Configur
 	}
 
 	client, ok := req.ProviderData.(*certMgr.Client)
-
 	if !ok {
 		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *certMgr.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			"Unexpected client type",
+			fmt.Sprintf("Expected *certMgr.Client, got: %T", req.ProviderData),
 		)
-
 		return
 	}
 

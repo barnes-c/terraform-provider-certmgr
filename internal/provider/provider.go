@@ -131,7 +131,7 @@ func (p *certMgrProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 	tflog.Debug(ctx, "Creating certMgr client")
 
-	client, err := certMgr.NewClient(&host, &port)
+	client, err := certMgr.NewClient(host, port)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create certMgr API Client",
