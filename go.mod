@@ -8,6 +8,15 @@ require (
 )
 
 require (
+	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
+	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
+	github.com/jcmturner/gofork v1.7.6 // indirect
+	github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
+	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
+	golang.org/x/crypto v0.32.0 // indirect
+)
+
+require (
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
@@ -17,6 +26,7 @@ require (
 	github.com/hashicorp/terraform-registry-address v0.2.4 // indirect
 	github.com/hashicorp/terraform-svchost v0.1.1 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
+	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
