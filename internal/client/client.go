@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/jcmturner/gokrb5/v8/client"
@@ -43,9 +42,8 @@ func loadCCache() (*credentials.CCache, error) {
 	return credentials.LoadCCache(ccachePath)
 }
 
-func NewClient(host, port string) (*Client, error) {
-	p, err := strconv.Atoi(port)
-	if err != nil || p <= 0 || p > 65535 {
+func NewClient(host string, port int) (*Client, error) {
+	if  port <= 0 || port > 65535 {
 		return nil, fmt.Errorf("invalid port: %q", port)
 	}
 
@@ -73,7 +71,7 @@ func NewClient(host, port string) (*Client, error) {
 
 	return &Client{
 		Host:       fqdn,
-		Port:       p,
+		Port:       port,
 		HTTPClient: httpClient,
 	}, nil
 }

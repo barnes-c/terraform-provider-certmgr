@@ -6,7 +6,9 @@ package provider
 import (
 	certMgr "certMgr/internal/client"
 	"context"
+	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -31,7 +33,7 @@ func New(version string) func() provider.Provider {
 
 type certMgrProviderModel struct {
 	Host types.String `tfsdk:"host"`
-	Port types.String `tfsdk:"port"`
+	Port types.Number `tfsdk:"port"`
 }
 
 type certMgrProvider struct {
@@ -51,7 +53,7 @@ func (p *certMgrProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 				Description: "URI for certMgr API. May also be provided via CERTMGR_HOST environment variable.",
 				Optional:    true,
 			},
-			"port": schema.StringAttribute{
+			"port": schema.NumberAttribute{
 				Description: "Port for certMgr API. May also be provided via CERTMGR_PORT environment variable.",
 				Optional:    true,
 			},
@@ -92,33 +94,43 @@ func (p *certMgrProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	host := os.Getenv("CERTMGR_HOST")
-	port := os.Getenv("CERTMGR_PORT")
-
+	portStr := os.Getenv("CERTMGR_PORT")
+	port := 0
+	
 	if !config.Host.IsNull() {
 		host = config.Host.ValueString()
 	}
-
+	
 	if !config.Port.IsNull() {
-		port = config.Port.ValueString()
+		bf := config.Port.ValueBigFloat()
+		portInt64, _ := bf.Int64()
+		port = int(portInt64)
+	} else if portStr != "" {
+		parsed, err := strconv.Atoi(portStr)
+		if err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("port"),
+				"Invalid ROGER_PORT Environment Variable",
+				fmt.Sprintf("ROGER_PORT must be an integer, but got: %q", portStr),
+			)
+			return
+		}
+		port = parsed
 	}
-
+	
 	if host == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("host"),
-			"Missing certMgr API Host",
-			"The provider cannot create the certMgr API client as there is a missing or empty value for the certMgr host. "+
-				"Set the host value in the configuration or use the CERTMGR_HOST environment variable. "+
-				"If either is already set, ensure the value is not empty.",
+			"Missing certMgr Host",
+			"Set the host value in the configuration or via the CERTMGR_HOST environment variable.",
 		)
 	}
-
-	if port == "" {
+	
+	if port == 0 {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("port"),
 			"Missing certMgr Port",
-			"The provider cannot create the certMgr API client as there is a missing or empty value for the certMgr port. "+
-				"Set the port value in the configuration or use the CERTMGR_PORT environment variable. "+
-				"If either is already set, ensure the value is not empty.",
+			"Set the port value in the configuration or via the CERTMGR_PORT environment variable.",
 		)
 	}
 
