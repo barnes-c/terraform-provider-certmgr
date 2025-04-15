@@ -1,120 +1,126 @@
-// Copyright (c) Christopher Barnes <christopher@barnes.biz>
-// SPDX-License-Identifier: MPL-2.0
-
 package certMgr
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/jcmturner/gokrb5/v8/client"
+	"github.com/jcmturner/gokrb5/v8/config"
+	"github.com/jcmturner/gokrb5/v8/credentials"
+	"github.com/jcmturner/gokrb5/v8/spnego"
 )
 
-type Certificate struct {
-	ID        int    `json:"id"`
-	Hostname  string `json:"hostname"`
-	Requestor string `json:"requestor"`
-	Start     string `json:"start"`
-	End       string `json:"end"`
+type Client struct {
+	HTTPClient *spnego.Client
+	Host       string
+	Port       int
 }
 
-func (c *Client) CreateCertificate(hostname string) (*Certificate, error) {
-	fqdn, err := c.resolveFQDN()
-	if err != nil {
-		return nil, err
+func loadKrb5Config() (*config.Config, error) {
+	path := os.Getenv("KRB5_CONFIG")
+	if path == "" {
+		path = "/etc/krb5.conf" // Default path for krb5.conf
 	}
-
-	url := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/", fqdn, c.Port)
-	payload, _ := json.Marshal(map[string]string{"hostname": hostname})
-
-	body, _, err := c.doRequest(http.MethodPost, url, payload)
-	if err != nil {
-		return nil, err
-	}
-
-	var cert Certificate
-	if err := json.Unmarshal(body, &cert); err != nil {
-		return nil, fmt.Errorf("unmarshal failed: %w", err)
-	}
-	return &cert, nil
+	return config.Load(path)
 }
 
-func (c *Client) GetCertificate(hostname string) (*Certificate, error) {
-	fqdn, err := c.resolveFQDN()
-	if err != nil {
-		return nil, err
+func loadCCache() (*credentials.CCache, error) {
+	ccachePath := os.Getenv("KRB5CCNAME")
+	if ccachePath == "" {
+		return nil, fmt.Errorf("KRB5CCNAME environment variable not set")
 	}
 
-	url := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/?hostname=%s", fqdn, c.Port, hostname)
-	body, _, err := c.doRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	type stagedResponse struct {
-		Meta    map[string]interface{} `json:"meta"`
-		Objects []Certificate          `json:"objects"`
-	}
-
-	var staged stagedResponse
-	if err := json.Unmarshal(body, &staged); err != nil {
-		return nil, fmt.Errorf("failed unmarshaling staged certs: %w", err)
-	}
-
-	if len(staged.Objects) == 0 {
-		return nil, fmt.Errorf("no certificates found for hostname %s", hostname)
-	}
-
-	latestCert := staged.Objects[len(staged.Objects)-1]
-
-	return &latestCert, nil
+	ccachePath = strings.TrimPrefix(ccachePath, "FILE:")
+	return credentials.LoadCCache(ccachePath)
 }
 
-func (c *Client) UpdateCertificate(cert Certificate) error {
-	fqdn, err := c.resolveFQDN()
+func NewClient(host, port string) (*Client, error) {
+	p, err := strconv.Atoi(port)
+	if err != nil || p <= 0 || p > 65535 {
+		return nil, fmt.Errorf("invalid port: %q", port)
+	}
+
+	krbConf, err := loadKrb5Config()
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to load krb5.conf: %w", err)
 	}
 
-	data, err := json.Marshal(cert)
+	ccache, err := loadCCache()
 	if err != nil {
-		return fmt.Errorf("marshal failed: %w", err)
+		return nil, fmt.Errorf("failed to load credential cache: %w", err)
 	}
 
-	url := fmt.Sprintf("https://%s:%d/krb/certmgr/certificate/", fqdn, c.Port)
-	if _, _, err := c.doRequest(http.MethodPost, url, data); err != nil {
-		return err
+	krbClient, err := client.NewFromCCache(ccache, krbConf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create kerberos client: %w", err)
 	}
 
-	return nil
+	fqdn, err := resolveFQDN(host)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve fqdn for host %q: %w", host, err)
+	}
+
+	httpClient := spnego.NewClient(krbClient, nil, "")
+
+	return &Client{
+		Host:       fqdn,
+		Port:       p,
+		HTTPClient: httpClient,
+	}, nil
 }
 
-func (c *Client) DeleteCertificate(hostname string) error {
-	fqdn, err := c.resolveFQDN()
+func resolveFQDN(host string) (string, error) {
+	ips, err := net.LookupIP(host)
 	if err != nil {
-		return fmt.Errorf("FQDN resolution failed: %w", err)
+		return "", fmt.Errorf("failed to resolve IP for hostname %s: %w", host, err)
 	}
 
-	urlList := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/?hostname=%s", fqdn, c.Port, hostname)
-	body, _, err := c.doRequest(http.MethodGet, urlList, nil)
-	if err != nil {
-		return fmt.Errorf("failed listing staged events: %w", err)
-	}
-
-	var events struct {
-		Objects []struct {
-			ID int `json:"id"`
-		} `json:"objects"`
-	}
-
-	if err := json.Unmarshal(body, &events); err != nil {
-		return fmt.Errorf("json parse error: %w", err)
-	}
-
-	for _, event := range events.Objects {
-		urlDel := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/%d/", fqdn, c.Port, event.ID)
-		if _, _, err := c.doRequest(http.MethodDelete, urlDel, nil); err != nil {
-			return fmt.Errorf("delete failed for event %d: %w", event.ID, err)
+	for _, ip := range ips {
+		if ip.To4() == nil {
+			continue
+		}
+		ptrs, err := net.LookupAddr(ip.String())
+		if err != nil {
+			return "", fmt.Errorf("reverse lookup failed for IP %s: %w", ip, err)
+		}
+		if len(ptrs) > 0 {
+			return strings.TrimSuffix(ptrs[0], "."), nil
 		}
 	}
-	return nil
+	return "", fmt.Errorf("no valid IPv4 PTR record found for host %s", host)
+}
+
+func (c *Client) doRequest(method, url string, payload []byte) ([]byte, int, error) {
+	req, err := http.NewRequest(method, url, bytes.NewReader(payload))
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	if payload != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, 0, fmt.Errorf("request failed: %w", err)
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			fmt.Printf("warning: failed to close response body: %v\n", cerr)
+		}
+	}()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return body, resp.StatusCode, nil
 }
