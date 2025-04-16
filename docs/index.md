@@ -34,4 +34,4 @@ provider "certmgr" {
 ### Optional
 
 - `host` (String) URI for certMgr API. May also be provided via CERTMGR_HOST environment variable.
-- `port` (String) Port for certMgr API. May also be provided via CERTMGR_PORT environment variable.
+- `port` (Number) Port for certMgr API. May also be provided via CERTMGR_PORT environment variable.
