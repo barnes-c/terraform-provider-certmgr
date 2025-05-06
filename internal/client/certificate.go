@@ -5,6 +5,7 @@ package certMgr
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -16,6 +17,8 @@ type Certificate struct {
 	Start     string `json:"start"`
 	End       string `json:"end"`
 }
+
+var ErrNoCertificates = errors.New("no certificates found")
 
 func (c *Client) CreateCertificate(hostname string) (*Certificate, error) {
 	url := fmt.Sprintf("https://%s:%d/krb/certmgr/staged/", c.Host, c.Port)
@@ -51,7 +54,7 @@ func (c *Client) GetCertificate(hostname string) (*Certificate, error) {
 	}
 
 	if len(staged.Objects) == 0 {
-		return nil, fmt.Errorf("no certificates found for hostname %s", hostname)
+		return nil, ErrNoCertificates
 	}
 
 	latestCert := staged.Objects[len(staged.Objects)-1]

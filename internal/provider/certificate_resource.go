@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -100,12 +101,23 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 	hostname := state.Hostname.ValueString()
 	certificate, err := r.client.GetCertificate(hostname)
 	if err != nil {
+        if errors.Is(err, certMgr.ErrNoCertificates) {
+            resp.Diagnostics.AddWarning(
+                "Certificate Not Found",
+                fmt.Sprintf(
+                    "No certificate found for hostname %s; removing resource from state.",
+                    hostname,
+                ),
+            )
+            resp.State.RemoveResource(ctx)
+            return
+        }
 		resp.Diagnostics.AddError(
-			"Error Reading certificate",
-			fmt.Sprintf("Could not read certificate for hostname %s: %s", hostname, err),
+		  "Error Reading Certificate",
+		  fmt.Sprintf("Could not read certificate for hostname %s: %s", hostname, err),
 		)
 		return
-	}
+	  }
 
 	state.ID = types.Int64Value(int64(certificate.ID))
 	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
