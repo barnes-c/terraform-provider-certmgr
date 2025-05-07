@@ -15,6 +15,8 @@ provider "certmgr" {
 }
 ```
 
+It is also possible to set these variables via environment variables. The provider expects them to be named `CERTMGR_HOST` and`CERTMGR_PORT`
+
 To be able to use the Provider valid Kerberos tickets must also be present
 
 ## Requirements

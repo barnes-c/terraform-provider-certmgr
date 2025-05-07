@@ -76,7 +76,7 @@ func (p *certMgrProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("host"),
 			"Unknown certMgr API Host",
 			"The provider cannot create the certMgr API client as there is an unknown configuration value for the certMgr host. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the certMgr_HOST environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the CERTMGR_HOST environment variable.",
 		)
 	}
 
