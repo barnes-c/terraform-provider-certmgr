@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2025 CERN
+
+SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # Terraform Provider CertMgr
 
 This is a terraform provider for [certMgr](https://gitlab.cern.ch/ai-config-team/ai-tools/-/blob/master/aitools/certmgr.py?ref_type=heads). certMgr is the certificate management tool used at CERN to automate the handling of X.509 certificates—typically for machines and services.
