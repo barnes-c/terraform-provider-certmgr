@@ -15,11 +15,13 @@ For more information about certMgr see the [GitLab Repo](https://gitlab.cern.ch/
 To use the provider you just have to declare a provider block:
 
 ```terraform
-provider "certmgr" {
+provider "certmgr" {..
   host = "<YOUR-CERTMGR-SERVER>"
-  port = 8008
+  port = "<YOUR-CERTMGR-PORT>"
 }
 ```
+
+By default the server and port are set to `hector.cern.ch` or `8008` respectively.
 
 It is also possible to set these variables via environment variables. The provider expects them to be named `CERTMGR_HOST` and`CERTMGR_PORT`
 
