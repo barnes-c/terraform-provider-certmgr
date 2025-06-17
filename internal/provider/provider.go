@@ -7,7 +7,6 @@ package provider
 import (
 	certMgr "certMgr/internal/client"
 	"context"
-	"fmt"
 	"os"
 	"strconv"
 
@@ -95,30 +94,27 @@ func (p *certMgrProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	host := os.Getenv("CERTMGR_HOST")
-	portStr := os.Getenv("CERTMGR_PORT")
-	port := 0
-	
+	if host == "" {
+		host = "hector.cern.ch"
+	}
+
+	port := 8008
+	if portStr := os.Getenv("CERTMGR_PORT"); portStr != "" {
+		if parsed, err := strconv.Atoi(portStr); err == nil {
+			port = parsed
+		}
+	}
+
 	if !config.Host.IsNull() {
 		host = config.Host.ValueString()
 	}
-	
+
 	if !config.Port.IsNull() {
 		bf := config.Port.ValueBigFloat()
 		portInt64, _ := bf.Int64()
 		port = int(portInt64)
-	} else if portStr != "" {
-		parsed, err := strconv.Atoi(portStr)
-		if err != nil {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("port"),
-				"Invalid ROGER_PORT Environment Variable",
-				fmt.Sprintf("ROGER_PORT must be an integer, but got: %q", portStr),
-			)
-			return
-		}
-		port = parsed
 	}
-	
+
 	if host == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("host"),
@@ -126,7 +122,7 @@ func (p *certMgrProvider) Configure(ctx context.Context, req provider.ConfigureR
 			"Set the host value in the configuration or via the CERTMGR_HOST environment variable.",
 		)
 	}
-	
+
 	if port == 0 {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("port"),
